@@ -55,3 +55,27 @@ h1 {
   width: 90%;
   max-width: 800px;
 }
+.chart-filters button,
+.currency-switch button {
+  background: #1e1e2f;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 8px 16px;
+  margin: 5px;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.chart-filters button:hover,
+.currency-switch button:hover {
+  background: #f1c40f;
+  color: #000;
+  transform: translateY(-2px);
+}
+
+canvas {
+  background: linear-gradient(180deg, #1e1e2f 0%, #121212 100%);
+  border-radius: 12px;
+  padding: 10px;
+}

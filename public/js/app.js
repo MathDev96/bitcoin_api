@@ -1,144 +1,134 @@
-let lastData = null; // para comparar subida/queda
 let chart = null;
-let chartData = {
-  labels: [],
-  datasets: [{
-    label: 'Preço Bitcoin (USD)',
-    data: [],
-    borderColor: '#f1c40f',
-    backgroundColor: 'rgba(241, 196, 15, 0.2)',
-    tension: 0.3
-  }]
-};
+let currentMode = "realtime";
+
+function chartOptions() {
+  return {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: 'white' } }
+    },
+    scales: {
+      x: {
+        ticks: { color: 'white' },
+        grid: { color: 'rgba(255,255,255,0.1)' }
+      },
+      y: {
+        ticks: { color: 'white' },
+        grid: { color: 'rgba(255,255,255,0.1)' }
+      }
+    }
+  };
+}
+
+function createChart(labels, data, labelText) {
+  const ctx = document.getElementById('btcChart').getContext('2d');
+
+  if (chart) {
+    chart.destroy();
+  }
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: labelText,
+        data: data,
+        borderColor: '#f1c40f',
+        backgroundColor: 'rgba(241,196,15,0.2)',
+        borderWidth: 3,
+        pointRadius: 2,
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: chartOptions()
+  });
+}
+
+// ===============================
+// TEMPO REAL
+// ===============================
+let realtimeLabels = [];
+let realtimeData = [];
 
 async function fetchBitcoin() {
   try {
     const response = await fetch('/bitcoin');
     const data = await response.json();
+    if (data.error) return;
 
-    if (data.error) {
-      document.getElementById('usd').textContent = '$0,00';
-      document.getElementById('brl').textContent = 'R$0,00';
-      document.getElementById('eur').textContent = '€0,00';
-      document.getElementById('error').textContent = 'Erro: ' + data.error;
-      document.getElementById('updated').textContent = '';
-      return;
-    }
-
-    document.getElementById('error').textContent = '';
-
-    // Formata valores
     const usd = Number(data.usd);
     const brl = Number(data.brl);
     const eur = Number(data.eur);
 
-    document.getElementById('usd').textContent = usd.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-    document.getElementById('brl').textContent = brl.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    document.getElementById('eur').textContent = eur.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+    document.getElementById('usd').textContent =
+      usd.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-    document.getElementById('updated').textContent = 'Atualizado em: ' + data.updated_at;
+    document.getElementById('brl').textContent =
+      brl.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-    // Muda a cor se subiu/baixou
-    if (lastData) {
-      document.getElementById('usd').style.color = usd > lastData.usd ? 'lime' : usd < lastData.usd ? 'red' : 'white';
-      document.getElementById('brl').style.color = brl > lastData.brl ? 'lime' : brl < lastData.brl ? 'red' : 'white';
-      document.getElementById('eur').style.color = eur > lastData.eur ? 'lime' : eur < lastData.eur ? 'red' : 'white';
-    }
+    document.getElementById('eur').textContent =
+      eur.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 
-    lastData = { usd, brl, eur };
+    document.getElementById('updated').textContent =
+      'Atualizado em: ' + data.updated_at;
 
-    // Atualiza gráfico
-    const now = new Date();
-    const label = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+    if (currentMode === "realtime") {
+      const now = new Date().toLocaleTimeString();
 
-    chartData.labels.push(label);
-    chartData.datasets[0].data.push(usd);
+      realtimeLabels.push(now);
+      realtimeData.push(usd);
 
-    if (chartData.labels.length > 20) { // últimos 20 pontos
-      chartData.labels.shift();
-      chartData.datasets[0].data.shift();
-    }
+      if (realtimeLabels.length > 20) {
+        realtimeLabels.shift();
+        realtimeData.shift();
+      }
 
-    if (!chart) {
-      const ctx = document.getElementById('btcChart').getContext('2d');
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: chartData,
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { labels: { color: 'white' } }
-          },
-          scales: {
-            x: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
-            y: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } }
-          }
-        }
-      });
-    } else {
-      chart.update();
+      createChart(realtimeLabels, realtimeData, 'Bitcoin (USD) - Tempo Real');
     }
 
   } catch (err) {
-    document.getElementById('error').textContent = 'Erro ao buscar dados';
-    document.getElementById('updated').textContent = '';
+    console.error("Erro tempo real:", err);
   }
 }
 
-// Primeiro fetch
-fetchBitcoin();
-
-// Atualiza a cada 20 segundos
-setInterval(fetchBitcoin, 20000);
-
-
-async function fetchHistoryMonthly() {
+// ===============================
+// HISTÓRICO DINÂMICO
+// ===============================
+async function fetchHistory(days) {
   try {
-    const response = await fetch('/bitcoin/history_monthly');
+    currentMode = "history";
+
+    const response = await fetch(`/bitcoin/history_monthly?days=${days}`);
     const data = await response.json();
     if (data.error) return;
 
-    const labels = Object.keys(data.monthly).map(m => {
-      const [year, month] = m.split('-');
-      return `${month}/${year}`;
-    });
-
-    const prices = Object.values(data.monthly);
-
-    const ctx = document.getElementById('btcChart').getContext('2d');
-
-    if (!chart) {
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Bitcoin (USD) - Mensal',
-            data: prices,
-            borderColor: '#f1c40f',
-            backgroundColor: 'rgba(241,196,15,0.2)',
-            tension: 0.3
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { labels: { color: 'white' } } },
-          scales: {
-            x: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
-            y: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } }
-          }
-        }
-      });
-    } else {
-      chart.data.labels = labels;
-      chart.data.datasets[0].data = prices;
-      chart.update();
-    }
+    createChart(
+      data.labels,
+      data.prices,
+      `Bitcoin (USD) - Últimos ${days} dias`
+    );
 
   } catch (err) {
-    console.error('Erro ao buscar histórico mensal:', err);
+    console.error("Erro histórico:", err);
   }
 }
 
-// Evento do botão
-document.getElementById('monthlyBtn').addEventListener('click', fetchHistoryMonthly);
+// ===============================
+// EVENTOS
+// ===============================
+document.addEventListener("DOMContentLoaded", () => {
+
+  fetchBitcoin();
+  setInterval(fetchBitcoin, 20000);
+
+  document.querySelectorAll('.chart-filters button')
+    .forEach(button => {
+      button.addEventListener('click', () => {
+        const days = button.getAttribute('data-days');
+        fetchHistory(days);
+      });
+    });
+
+});
