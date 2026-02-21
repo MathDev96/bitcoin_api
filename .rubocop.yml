@@ -2,11 +2,7 @@
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
 # Overwrite or add rules to create your own house style
-Style/StringLiterals:
-  EnforcedStyle: single_quotes
-
-Layout/EmptyLinesAroundClassBody:
-  Enabled: false
-
-Layout/TrailingEmptyLines:
-  Enabled: false
+#
+# # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
+# Layout/SpaceInsideArrayLiteralBrackets:
+#   Enabled: false
