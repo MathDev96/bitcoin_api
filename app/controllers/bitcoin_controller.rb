@@ -1,8 +1,7 @@
-require 'net/http'
-require 'json'
+require "net/http"
+require "json"
 
 class BitcoinController < ApplicationController
-
   # ===============================
   # PREÇO ATUAL
   # ===============================
@@ -10,10 +9,10 @@ class BitcoinController < ApplicationController
     price_data = fetch_bitcoin_price
 
     render json: {
-      usd: price_data['usd'],
-      brl: price_data['brl'],
-      eur: price_data['eur'],
-      updated_at: Time.now.strftime('%d/%m/%Y %H:%M:%S')
+      usd: price_data["usd"],
+      brl: price_data["brl"],
+      eur: price_data["eur"],
+      updated_at: Time.now.strftime("%d/%m/%Y %H:%M:%S")
     }
   end
 
@@ -33,7 +32,7 @@ class BitcoinController < ApplicationController
     end
 
     data = JSON.parse(response.body)
-    prices = data['prices']
+    prices = data["prices"]
 
     labels = prices.map do |p|
       Time.at(p[0] / 1000).strftime("%d/%m/%Y")
@@ -50,7 +49,7 @@ class BitcoinController < ApplicationController
   private
 
   def fetch_bitcoin_price
-    url = 'https://api.coingecko.com/api/v3/coins/bitcoin'
+    url = "https://api.coingecko.com/api/v3/coins/bitcoin"
     uri = URI(url)
     response = Net::HTTP.get_response(uri)
 
@@ -59,10 +58,9 @@ class BitcoinController < ApplicationController
     data = JSON.parse(response.body)
 
     {
-      'usd' => data.dig('market_data', 'current_price', 'usd'),
-      'brl' => data.dig('market_data', 'current_price', 'brl'),
-      'eur' => data.dig('market_data', 'current_price', 'eur')
+      "usd" => data.dig("market_data", "current_price", "usd"),
+      "brl" => data.dig("market_data", "current_price", "brl"),
+      "eur" => data.dig("market_data", "current_price", "eur")
     }
   end
-
 end
